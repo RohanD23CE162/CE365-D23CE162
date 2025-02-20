@@ -1,83 +1,84 @@
 %{
     #include <stdio.h>
     #include <string.h>
-    void printToken(char* type, char* value);
+    
+    void print_token(char* token_type, char* token_value);
 %}
 
 %option noyywrap
 
-/* basic patterns */
-digit    [0-9]
-letter   [a-zA-Z]
-id       {letter}({letter}|{digit})*
-int      {digit}+
-float    {digit}+"."{digit}+
-ws       [ \t\r\f\v]+
-char     \'[^\']\' 
-string   \"[^\"]*\"
+DIGIT       [0-9]
+LETTER      [a-zA-Z]
+ID          {LETTER}({LETTER}|{DIGIT})*
+INT_CONST   {DIGIT}+
+FLOAT_CONST {DIGIT}+"."{DIGIT}+
+WHITESPACE  [ \t\r\f\v]+
+CHAR_CONST  \'[^\']\' 
+STR_CONST   \"[^\"]*\"
 
 %%
 
-    /* all C keywords */
-"auto"|"break"|"case"|"char"|"const"|"continue"|"default"|"do"|"double"|"else"|"enum"|"extern"|"float"|"for"|"goto"|"if"|"int"|"long"|"register"|"return"|"short"|"signed"|"sizeof"|"static"|"struct"|"switch"|"typedef"|"union"|"unsigned"|"void"|"volatile"|"while"|"main" {
-    printToken("Keyword", yytext);
+"auto"|"break"|"case"|"char"|"const"|"continue"|"default"|"do"|"double"|"else"|"enum"|"extern"|"float"|"for"|"goto"|"if"|"int"|"long"|"register"|"return"|"short"|"signed"|"sizeof"|"static"|"struct"|"switch"|"typedef"|"union"|"unsigned"|"void"|"volatile"|"while" {
+    print_token("Keyword", yytext);
 }
 
-{id} {
-    printToken("Identifier", yytext);
+{ID} {
+    print_token("Identifier", yytext);
 }
 
-{float} {
-    printToken("Float", yytext);
+{FLOAT_CONST} {
+    print_token("Float Constant", yytext);
 }
 
-{int} {
-    printToken("Integer", yytext);
+{INT_CONST} {
+    print_token("Integer Constant", yytext);
 }
 
-{char} {
-    printToken("Character", yytext);
+{CHAR_CONST} {
+    print_token("Char Constant", yytext);
 }
 
-{string} {
-    printToken("String", yytext);
+{STR_CONST} {
+    print_token("String Constant", yytext);
 }
 
-    /* symbols */
-[(){};,] {
-    printToken("Symbol", yytext);
+"["|"]"|"("|")"|"{"|"}"|","|";"|":" {
+    print_token("Punctuation", yytext);
 }
 
-    /* operators */
-[+\-*/=<>!] {
-    printToken("Operator", yytext);
+"+"|"-"|"*"|"/"|"%"|"="|"<"|">"|"!"|"&"|"|"|"^"|"~"|"?"|"+="|"-="|"*="|"/="|"%="|"=="|"!="|"<="|">="|"&&"|"||"|"++"|"--" {
+    print_token("Operator", yytext);
 }
 
-    /* skip comments */
-"//".*  { }
-"/*"([^*]|\*+[^*/])*\*+"/" { }
+"//"[^\n]* { /* Single line comment - ignore */ }
 
-\n      { }
-{ws}    { }
+"/*"([^*]|\*+[^*/])*\*+"/" { /* Multi-line comment - ignore */ }
 
-.       { printf("Error: Invalid character %s\n", yytext); }
+\n { /* Ignore newlines */ }
+
+{WHITESPACE} { /* Ignore whitespace */ }
+
+. {
+    printf("Lexical Error: Unexpected character '%s' at line %d\n", yytext, yylineno);
+}
 
 %%
 
-/* print token in a nice format */
-void printToken(char* type, char* value) {
-    printf("%s: %s\n", type, value);
+void print_token(char* token_type, char* token_value) {
+    printf("%-12s: %s\n", token_type, token_value);
 }
 
 int main() {
-    yyin = fopen("input.c", "r");
-    if(!yyin) {
-        printf("Can't open input.c\n");
+    FILE* input_file = fopen("input.c", "r");
+    if (!input_file) {
+        printf("Error: Cannot open input.c\n");
         return 1;
     }
 
-    printf("Analyzing input.c...\n\n");
+    yyin = input_file;
+    printf("\nTOKENS:\n");
     yylex();
-    fclose(yyin);
+    
+    fclose(input_file);
     return 0;
 }
